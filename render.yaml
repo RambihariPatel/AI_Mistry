@@ -11,7 +11,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: GEMINI_MODEL
-        value: gemini-3.5-flash
+        value: gemini-3.5-flash-lite
       - key: MONGODB_URI
         sync: false
       - key: GEMINI_API_KEY

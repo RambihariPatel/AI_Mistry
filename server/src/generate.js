@@ -15,13 +15,16 @@ export async function generateMystery(premise, difficulty) {
   const countsForLevel = counts[difficulty];
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
     contents: `Create a fair, original, logically solvable detective mystery based on this premise: ${premise}\nDifficulty: ${difficulty}. Return exactly ${countsForLevel.suspects} suspects, ${countsForLevel.clues} clues, and ${countsForLevel.hints} progressive hints. Every clue must be compatible with one solution and support it; include red herrings that remain fair. Hints must not name the culprit outright. Ensure the story does not reveal the solution. Return JSON only with keys title, story, suspects (objects name, role, description), clues (objects label, content), hints (strings), culpritIndex (zero-based), solutionExplanation (string). The solution explanation must connect concrete clues to the culprit.`,
-    config: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, story: { type: 'STRING' }, suspects: { type: 'ARRAY', items: { type: 'OBJECT', properties: { name: { type: 'STRING' }, role: { type: 'STRING' }, description: { type: 'STRING' } }, required: ['name', 'role', 'description'] } }, clues: { type: 'ARRAY', items: { type: 'OBJECT', properties: { label: { type: 'STRING' }, content: { type: 'STRING' } } } }, hints: { type: 'ARRAY', items: { type: 'STRING' } }, culpritIndex: { type: 'INTEGER' }, solutionExplanation: { type: 'STRING' } }, required: ['title', 'story', 'suspects', 'clues', 'hints', 'culpritIndex', 'solutionExplanation'] } }
+    config: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, story: { type: 'STRING' }, suspects: { type: 'ARRAY', items: { type: 'OBJECT', properties: { name: { type: 'STRING' }, role: { type: 'STRING' }, description: { type: 'STRING' } }, required: ['name', 'role', 'description'] } }, clues: { type: 'ARRAY', items: { type: 'OBJECT', properties: { label: { type: 'STRING' }, content: { type: 'STRING' } }, required: ['label', 'content'] } }, hints: { type: 'ARRAY', items: { type: 'STRING' } }, culpritIndex: { type: 'INTEGER' }, solutionExplanation: { type: 'STRING' } }, required: ['title', 'story', 'suspects', 'clues', 'hints', 'culpritIndex', 'solutionExplanation'] } }
   });
   let parsed;
   try { parsed = generatedSchema.parse(JSON.parse(response.text)); }
-  catch { throw new Error('The generated case did not meet the required format. Please try again.'); }
+  catch (err) {
+    console.error('Schema validation error:', err.message);
+    throw new Error('The generated case did not meet the required format. Please try again.');
+  }
   if (parsed.suspects.length !== countsForLevel.suspects || parsed.clues.length !== countsForLevel.clues || parsed.hints.length !== countsForLevel.hints || parsed.culpritIndex >= parsed.suspects.length || new Set(parsed.suspects.map(s => s.name.toLowerCase())).size !== parsed.suspects.length) {
     throw new Error('The generated case did not meet the required counts. Please try again.');
   }
